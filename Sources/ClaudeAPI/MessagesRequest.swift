@@ -7,7 +7,7 @@ import Foundation
 package struct MessagesRequest: Sendable, Codable {
   package var model: String
   package var maxTokens: Int
-  package var system: String?
+  package var system: SystemPrompt?
   package var messages: [Message]
   package var tools: [ToolDefinition]?
   package var toolChoice: ToolChoice?
@@ -25,7 +25,7 @@ package struct MessagesRequest: Sendable, Codable {
   package init(
     model: String,
     maxTokens: Int = 16_000,
-    system: String? = nil,
+    system: SystemPrompt? = nil,
     messages: [Message],
     tools: [ToolDefinition]? = nil,
     toolChoice: ToolChoice? = nil,
@@ -62,6 +62,63 @@ package struct MessagesRequest: Sendable, Codable {
     case topK = "top_k"
     case cacheControl = "cache_control"
     case outputConfig = "output_config"
+  }
+}
+
+/// The `system` field: plain text, or one text block carrying a cache
+/// breakpoint so the prompt can be reused across requests.
+///
+/// Request-level automatic caching puts its breakpoint on the last block. In
+/// a single-turn session that's the new user message, so a shared system
+/// prompt would be written on every request and never read. `.cached` gives
+/// the system prompt its own breakpoint (one of the API's four).
+package enum SystemPrompt: Sendable, Hashable, Codable, ExpressibleByStringLiteral {
+  case text(String)
+  case cached(String, CacheControl)
+
+  /// The prompt text, whichever way it is sent.
+  package var text: String {
+    switch self {
+    case .text(let t), .cached(let t, _): t
+    }
+  }
+
+  package init(stringLiteral value: String) { self = .text(value) }
+
+  private struct Block: Codable {
+    var type = "text"
+    var text: String
+    var cacheControl: CacheControl?
+
+    private enum CodingKeys: String, CodingKey {
+      case type, text
+      case cacheControl = "cache_control"
+    }
+  }
+
+  package init(from decoder: Decoder) throws {
+    let c = try decoder.singleValueContainer()
+    if let text = try? c.decode(String.self) {
+      self = .text(text)
+      return
+    }
+    let blocks = try c.decode([Block].self)
+    let text = blocks.map(\.text).joined(separator: "\n\n")
+    if let cache = blocks.last?.cacheControl {
+      self = .cached(text, cache)
+    } else {
+      self = .text(text)
+    }
+  }
+
+  package func encode(to encoder: Encoder) throws {
+    var c = encoder.singleValueContainer()
+    switch self {
+    case .text(let text):
+      try c.encode(text)
+    case .cached(let text, let cache):
+      try c.encode([Block(text: text, cacheControl: cache)])
+    }
   }
 }
 

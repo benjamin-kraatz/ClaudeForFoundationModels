@@ -18,10 +18,20 @@ import Testing
       from: .make(transcript: transcript),
       model: .sonnet4_6
     )
-    #expect(built.request.system == "Be concise.")
+    #expect(built.request.system == .cached("Be concise.", built.request.cacheControl!))
     #expect(built.request.messages.count == 1)
     #expect(built.request.messages[0].role == .user)
     #expect(built.request.messages[0].content == [.text("Hello")])
+  }
+
+  @Test func `empty instructions stay a plain system string`() throws {
+    let transcript = Transcript(entries: [
+      .instructions(.init(segments: [.text(.init(content: ""))], toolDefinitions: [])),
+      .prompt(.init(segments: [.text(.init(content: "Hello"))])),
+    ])
+    let built = try RequestBuilder.build(from: .make(transcript: transcript), model: .sonnet4_6)
+    #expect(built.request.system == .text(""))
+    #expect(built.request.cacheControl != nil)
   }
 
   @Test func `multi-turn entries map to alternating messages`() throws {
@@ -270,7 +280,7 @@ import Testing
       model: .sonnet4_6
     )
     #expect(guided.request.outputConfig?.format != nil)
-    #expect(guided.request.system == "Be concise.")
+    #expect(guided.request.system?.text == "Be concise.")
     #expect(guided.request.system == plain.request.system)
     #expect(guided.request.tools == plain.request.tools)
     #expect(guided.request.messages == plain.request.messages)

@@ -123,15 +123,20 @@ enum RequestBuilder {
         effort: hopEffort(for: fallback)
       )
     }
+    // The system prompt gets its own breakpoint as well as the request-level
+    // one, so a fresh session per request still reads its instructions from
+    // the cache. An empty prompt stays plain: the API rejects an empty text
+    // block that carries `cache_control`.
+    let cacheControl = CacheControl()
     var req = MessagesRequest(
       model: model.id,
       maxTokens: request.generationOptions.maximumResponseTokens ?? 16_000,
-      system: system,
+      system: system.map { $0.isEmpty ? .text($0) : .cached($0, cacheControl) },
       messages: messages,
       tools: allTools.isEmpty ? nil : allTools,
       toolChoice: toolChoice,
       thinking: thinkingConfig,
-      cacheControl: .init(),
+      cacheControl: cacheControl,
       outputConfig: effort.map { OutputConfig(effort: $0) },
       stream: true
     )

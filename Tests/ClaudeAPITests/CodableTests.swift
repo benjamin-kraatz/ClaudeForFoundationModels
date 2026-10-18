@@ -11,7 +11,7 @@ import Testing
     let req = MessagesRequest(
       model: "claude-opus-4-7",
       maxTokens: 1024,
-      system: "Be terse.",
+      system: .cached("Be terse.", .init(ttl: .oneHour)),
       messages: [.user("hi")],
       tools: [
         .init(
@@ -32,6 +32,23 @@ import Testing
     #expect((json["thinking"] as? [String: Any])?["display"] as? String == "summarized")
     #expect((json["cache_control"] as? [String: Any])?["ttl"] as? String == "1h")
     #expect((json["tools"] as? [[String: Any]])?.first?["input_schema"] != nil)
+    let system = try #require(json["system"] as? [[String: Any]])
+    #expect(system.count == 1)
+    #expect(system[0]["type"] as? String == "text")
+    #expect(system[0]["text"] as? String == "Be terse.")
+    #expect((system[0]["cache_control"] as? [String: Any])?["ttl"] as? String == "1h")
+  }
+
+  @Test func `system prompt round-trips as text or a cached block`() throws {
+    for prompt: SystemPrompt in ["Be terse.", .cached("Be terse.", .init())] {
+      let req = MessagesRequest(model: "claude-a", system: prompt, messages: [.user("hi")])
+      let data = try JSONEncoder().encode(req)
+      #expect(try JSONDecoder().decode(MessagesRequest.self, from: data).system == prompt)
+    }
+    let plain = try JSONEncoder().encode(
+      MessagesRequest(model: "claude-a", system: "Be terse.", messages: [.user("hi")]))
+    let json = try #require(try JSONSerialization.jsonObject(with: plain) as? [String: Any])
+    #expect(json["system"] as? String == "Be terse.")
   }
 
   // A fallback entry's field replaces the request's whole field for that
