@@ -13,9 +13,12 @@ package struct MessagesResponse: Sendable, Codable {
   package var content: [ContentBlock]
   package var stopReason: StopReason?
   package var usage: Usage
+  /// The API's cache diagnosis, when the request opted in. Kept loosely typed
+  /// because a shape this package doesn't know must not fail the response.
+  package var diagnostics: JSONValue?
 
   private enum CodingKeys: String, CodingKey {
-    case id, model, role, content, usage
+    case id, model, role, content, usage, diagnostics
     case stopReason = "stop_reason"
   }
 }

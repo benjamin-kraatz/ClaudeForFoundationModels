@@ -17,6 +17,7 @@ import FoundationModels
 struct EventTranslator: Sendable {
   let responseEntryID: String
   let toolCallsEntryID: String
+  let cacheDiagnostics: ClaudeCacheDiagnostics?
 
   /// The turn's content blocks completed so far, as the API sent them.
   private(set) var content: [JSONValue] = []
@@ -47,10 +48,12 @@ struct EventTranslator: Sendable {
 
   init(
     responseEntryID: String = UUID().uuidString,
-    toolCallsEntryID: String = UUID().uuidString
+    toolCallsEntryID: String = UUID().uuidString,
+    cacheDiagnostics: ClaudeCacheDiagnostics? = nil
   ) {
     self.responseEntryID = responseEntryID
     self.toolCallsEntryID = toolCallsEntryID
+    self.cacheDiagnostics = cacheDiagnostics
   }
 
   /// ``content`` as the final assistant message of a continuation request:
@@ -136,6 +139,7 @@ struct EventTranslator: Sendable {
       case .messageStart(let response):
         currentUsage = TurnUsage(usage: response.usage)
         model = response.model
+        cacheDiagnostics?.record(response)
 
       case .contentBlockStart(let index, let block):
         let target = Self.target(for: block)

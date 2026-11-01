@@ -423,6 +423,7 @@ struct StubbedClaudeModel: LanguageModel {
   let model: ClaudeModel
   let fallbacks: ClaudeFallbacks
   let userProfileID: String?
+  let cacheDiagnostics: ClaudeCacheDiagnostics?
 
   init(
     transport: MockTransport,
@@ -431,7 +432,8 @@ struct StubbedClaudeModel: LanguageModel {
     capabilities: [LanguageModelCapabilities.Capability] = [.toolCalling, .reasoning],
     model: ClaudeModel = .sonnet5,
     fallbacks: ClaudeFallbacks = [],
-    userProfileID: String? = nil
+    userProfileID: String? = nil,
+    cacheDiagnostics: ClaudeCacheDiagnostics? = nil
   ) {
     self.transport = transport
     self.auth = auth
@@ -440,6 +442,7 @@ struct StubbedClaudeModel: LanguageModel {
     self.model = model
     self.fallbacks = fallbacks
     self.userProfileID = userProfileID
+    self.cacheDiagnostics = cacheDiagnostics
   }
 
   init(fixture: Data) {
@@ -457,7 +460,8 @@ struct StubbedClaudeModel: LanguageModel {
       attestSession: attestSession,
       model: model,
       fallbacks: fallbacks,
-      userProfileID: userProfileID
+      userProfileID: userProfileID,
+      cacheDiagnostics: cacheDiagnostics
     )
   }
 }
@@ -472,10 +476,12 @@ struct StubbedExecutor: LanguageModelExecutor {
     var model: ClaudeModel = .sonnet5
     var fallbacks: ClaudeFallbacks = []
     var userProfileID: String? = nil
+    var cacheDiagnostics: ClaudeCacheDiagnostics? = nil
 
     static func == (a: Self, b: Self) -> Bool {
       a.transport === b.transport && a.auth == b.auth && a.attestSession === b.attestSession
         && a.model == b.model && a.fallbacks == b.fallbacks && a.userProfileID == b.userProfileID
+        && a.cacheDiagnostics == b.cacheDiagnostics
     }
 
     func hash(into hasher: inout Hasher) {
@@ -496,7 +502,8 @@ struct StubbedExecutor: LanguageModelExecutor {
         authMode: configuration.auth,
         timeout: 5,
         fallbacks: configuration.fallbacks,
-        userProfileID: configuration.userProfileID
+        userProfileID: configuration.userProfileID,
+        cacheDiagnostics: configuration.cacheDiagnostics
       ),
       transport: configuration.transport,
       attestSession: configuration.attestSession

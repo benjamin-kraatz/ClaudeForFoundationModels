@@ -2,6 +2,8 @@
 
 Use Claude as a server-side language model through Apple's [Foundation Models](https://developer.apple.com/documentation/foundationmodels) framework. The package conforms Claude to the framework's `LanguageModel` protocol, so you drive it with the same `LanguageModelSession` API you use for Apple's on-device model — `respond(to:)`, streaming, guided generation, and tool calling all work the same way.
 
+> **DOKK fork.** This is a modified copy of [anthropics/ClaudeForFoundationModels](https://github.com/anthropics/ClaudeForFoundationModels) 0.2.3, kept for [DOKK](https://github.com/benjamin-kraatz/DeeDock). Branch `codex/dokk-cache-diagnostics` adds two changes to upstream: `ClaudeCacheDiagnostics`, which opts requests in to the API's cache diagnostics, and a cache breakpoint on the system prompt ([upstream issue #42](https://github.com/anthropics/ClaudeForFoundationModels/issues/42)). `main` tracks upstream unchanged.
+
 > **Beta.** This package targets the Foundation Models server-side language model API introduced in the OS 27 betas. APIs may change before general availability.
 
 ## Contents

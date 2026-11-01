@@ -22,6 +22,7 @@ public struct ClaudeExecutor: LanguageModelExecutor {
     public let fixedEffort: ClaudeModel.Effort?
     public let fallbacks: ClaudeFallbacks
     public let userProfileID: String?
+    public let cacheDiagnostics: ClaudeCacheDiagnostics?
 
     public init(
       model: ClaudeModel,
@@ -31,7 +32,8 @@ public struct ClaudeExecutor: LanguageModelExecutor {
       timeout: TimeInterval,
       fixedEffort: ClaudeModel.Effort? = nil,
       fallbacks: ClaudeFallbacks = [],
-      userProfileID: String? = nil
+      userProfileID: String? = nil,
+      cacheDiagnostics: ClaudeCacheDiagnostics? = nil
     ) {
       self.model = model
       self.baseURL = baseURL
@@ -41,6 +43,7 @@ public struct ClaudeExecutor: LanguageModelExecutor {
       self.fixedEffort = fixedEffort
       self.fallbacks = fallbacks
       self.userProfileID = userProfileID
+      self.cacheDiagnostics = cacheDiagnostics
     }
   }
 
@@ -132,7 +135,7 @@ public struct ClaudeExecutor: LanguageModelExecutor {
         serverTools: configuration.serverTools,
         fallbacks: configuration.fallbacks
       )
-      var translator = EventTranslator()
+      var translator = EventTranslator(cacheDiagnostics: configuration.cacheDiagnostics)
       var request = built.request
       var sentCount = 0
       // The API pauses a long server-tool loop (`pause_turn`) and resumes it
@@ -169,11 +172,15 @@ public struct ClaudeExecutor: LanguageModelExecutor {
   /// Sends one request of a turn and translates its response into the
   /// turn's translator, refreshing a rejected App Attest token once.
   private func send(
-    _ request: MessagesRequest,
+    _ turnRequest: MessagesRequest,
     betas: [String],
     translating translator: inout EventTranslator,
     into channel: LanguageModelExecutorGenerationChannel
   ) async throws -> StopReason? {
+    // Read for every request, `pause_turn` continuations included: each one
+    // names the response just before it.
+    var request = turnRequest
+    request.diagnostics = configuration.cacheDiagnostics?.nextRequest
     let channelWritten = Mutex(false)
     let (authHeaders, bearer) = try await authContext()
     let headers = requestHeaders(authHeaders, betas: betas)

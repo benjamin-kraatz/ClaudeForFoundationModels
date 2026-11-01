@@ -20,6 +20,8 @@ package struct MessagesRequest: Sendable, Codable {
   /// Substitute models for a policy refusal. Sending any needs the
   /// ``Fallbacks/betaHeader`` opt-in.
   package var fallbacks: Fallbacks?
+  /// Opts the request in to cache diagnostics.
+  package var diagnostics: CacheDiagnosticsRequest?
   package var stream: Bool
 
   package init(
@@ -36,6 +38,7 @@ package struct MessagesRequest: Sendable, Codable {
     cacheControl: CacheControl? = nil,
     outputConfig: OutputConfig? = nil,
     fallbacks: Fallbacks? = nil,
+    diagnostics: CacheDiagnosticsRequest? = nil,
     stream: Bool = false
   ) {
     self.model = model
@@ -51,17 +54,48 @@ package struct MessagesRequest: Sendable, Codable {
     self.cacheControl = cacheControl
     self.outputConfig = outputConfig
     self.fallbacks = fallbacks
+    self.diagnostics = diagnostics
     self.stream = stream
   }
 
   private enum CodingKeys: String, CodingKey {
-    case model, system, messages, tools, thinking, stream, temperature, fallbacks
+    case model, system, messages, tools, thinking, stream, temperature, fallbacks, diagnostics
     case maxTokens = "max_tokens"
     case toolChoice = "tool_choice"
     case topP = "top_p"
     case topK = "top_k"
     case cacheControl = "cache_control"
     case outputConfig = "output_config"
+  }
+}
+
+/// The `diagnostics` object. Its presence is the opt-in, so the API stores a
+/// fingerprint only for requests that carry it.
+package struct CacheDiagnosticsRequest: Sendable, Hashable, Codable {
+  /// The `id` of the previous response, or `nil` on the first request.
+  package var previousMessageID: String?
+
+  package init(previousMessageID: String?) {
+    self.previousMessageID = previousMessageID
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case previousMessageID = "previous_message_id"
+  }
+
+  package init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    previousMessageID = try c.decodeIfPresent(String.self, forKey: .previousMessageID)
+  }
+
+  package func encode(to encoder: Encoder) throws {
+    var c = encoder.container(keyedBy: CodingKeys.self)
+    // An explicit `null` is how a first request opts in, so it's never omitted.
+    if let previousMessageID {
+      try c.encode(previousMessageID, forKey: .previousMessageID)
+    } else {
+      try c.encodeNil(forKey: .previousMessageID)
+    }
   }
 }
 

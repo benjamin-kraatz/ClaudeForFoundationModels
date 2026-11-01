@@ -30,6 +30,7 @@ public struct ClaudeLanguageModel: Sendable {
   public let fixedEffort: ClaudeModel.Effort?
   public let fallbacks: ClaudeFallbacks
   public let userProfileID: String?
+  public let cacheDiagnostics: ClaudeCacheDiagnostics?
   let authMode: AuthMode
 
   /// - Parameters:
@@ -59,6 +60,9 @@ public struct ClaudeLanguageModel: Sendable {
   ///     A fallback can narrow what the model offers. Images and guided
   ///     generation need every model in the chain to support them, and
   ///     sampling parameters are sent only when every model accepts them.
+  ///   - cacheDiagnostics: Opts every request in to the API's cache
+  ///     diagnostics and collects the results. See ``ClaudeCacheDiagnostics``.
+  ///     `nil` sends no `diagnostics` object.
   ///   - serverTools: Tools that execute on Anthropic's infrastructure
   ///     (web search, code execution). Distinct from the framework's
   ///     `tools:` array, which the framework invokes client-side.
@@ -72,6 +76,7 @@ public struct ClaudeLanguageModel: Sendable {
     userProfileID: String? = nil,
     fixedEffort: ClaudeModel.Effort? = nil,
     fallbacks: ClaudeFallbacks = [],
+    cacheDiagnostics: ClaudeCacheDiagnostics? = nil,
     serverTools: Set<ClaudeServerTool> = [],
     baseURL: URL = ClaudeLanguageModel.defaultBaseURL,
     timeout: TimeInterval = 60
@@ -90,6 +95,7 @@ public struct ClaudeLanguageModel: Sendable {
     self.fixedEffort = fixedEffort
     self.fallbacks = fallbacks
     self.userProfileID = userProfileID
+    self.cacheDiagnostics = cacheDiagnostics
     self.serverTools = serverTools
     self.baseURL = baseURL
     self.timeout = timeout
@@ -142,7 +148,8 @@ extension ClaudeLanguageModel: LanguageModel {
       timeout: timeout,
       fixedEffort: fixedEffort,
       fallbacks: fallbacks,
-      userProfileID: userProfileID
+      userProfileID: userProfileID,
+      cacheDiagnostics: cacheDiagnostics
     )
   }
 }
